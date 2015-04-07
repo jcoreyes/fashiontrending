@@ -51,6 +51,16 @@ body {
   font-size: 21px;
 }
 
+.topitems {
+    display: table;
+    left: 50%;
+    margin-left: 25%;
+}
+
+.article {
+    display:table-cell;
+    padding-right: 10px;
+}
 /* Supporting marketing content */
 .marketing {
   margin: 40px 0;
