@@ -4,23 +4,21 @@ import sys
 import pickle
 import time
 
-def get_recent_media(user_id):
+def get_recent_media(tag):
 	all_media = []
 	recent_media = []
-	max_id = None
-	counter = 0
+	min_id = None
 	while (recent_media is not None):
 		try:
-			if (max_id is not None):
-				recent_media, next_ = api.user_recent_media(user_id=user_id, max_id=max_id)
+			if (min_id is not None):
+				recent_media, next_ = api.tag_recent_media(user_id=user_id, min_id=min_id)
 			else:
-				recent_media, next_ = api.user_recent_media(user_id=user_id)
+				recent_media, next_ = api.tag_recent_media(user_id=user_id)
 			for media in recent_media:
 				all_media.append(media)
 			if len(recent_media) > 19:
-				max_id = recent_media[-1].id.split('_')[0]
+				min_id = recent_media[-1].id.split('_')[0]
 			else:
-				print "Found %d" %len(all_media)
 				break
 
 		except InstagramAPIError as e:
@@ -37,7 +35,7 @@ def get_recent_media(user_id):
 		except:
 			"Error getting data for %d" %user_id
 			break
-
+	print "Found %d" %len(all_media)
 	media_counts.append(len(all_media))
 	pickle.dump(all_media, save_file)
 
@@ -55,19 +53,16 @@ if __name__ == '__main__':
 	with open(user_ids_file, 'r') as id_file:
 		for line in id_file.readlines():
 			user_ids.append(line.rstrip('\n'))
-			
-	# while user_ids[0] != '1535113556':
-	# 	user_ids.pop(0)
+	print user_ids
+
 	# stopped at 10051934
 	# media counts [2944, 4328, 279, 1501, 1282, 765, 2445, 886, 1798, 234, 2058, 1168, 64, 2375, 1388, 852, 1142, 1039, 449, 771, 977, 2910, 442, 1228, 591, 4820, 4963, 14073, 4280]
 	# [5080, 309, 1, 0, 203, 286, 8701, 234, 3627, 4448, 4230, 2748, 1369]
 	# stopped at 13497422
 	# sum of 93288
 	for user_id in user_ids:
-		try:
-			print "Crawling %s" %user_id
-			get_recent_media(user_id)
-			print "Rate limit %s" %api.x_ratelimit_remaining
-			print media_counts
-		except:
-			"Error crawling"
+		print "Crawling %s" %user_id
+		get_recent_media(user_id)
+		print "Rate limit %s" %api.x_ratelimit_remaining
+		print media_counts
+
