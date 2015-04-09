@@ -1,0 +1,10 @@
+ratios. 
+
+#fashion - 3
+#style - 3
+#clothing - 2
+#shopping - 2
+#outfit - 2
+#instafashion - 2
+#shoes - 1
+#bag - 1
