@@ -6,9 +6,6 @@ def get_user_id(username):
 	for user in user_info:
 		return user.id
 
-def save_user_ids():
-	pass
-
 if __name__ == '__main__':
 
 	access_token = sys.argv[1]
