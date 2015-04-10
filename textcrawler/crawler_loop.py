@@ -5,7 +5,7 @@ def get_info():
 	Uses Instagram to find recent media that uses the "fashion" tag
 	"""
 	# this is graces access token. may replace
-	access_token = "245374485.9d8f80b.c15ebf31857942ef8dd8fb67c4f3445d"
+	access_token = ""
 	# retrieves recent posts that are tagged with the word "fashion"
 	tag_url = "https://api.instagram.com/v1/tags/fashion/media/recent?access_token=" + access_token
 	# get instagram information
