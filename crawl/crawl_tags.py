@@ -1,68 +1,70 @@
 from instagram.client import InstagramAPI
 from instagram.bind import InstagramAPIError
 import sys
-import pickle
+import cPickle as pickle
 import time
 
+max_media = 1e5
 def get_recent_media(tag):
 	all_media = []
 	recent_media = []
 	min_id = None
+	prev_day = 10
 	while (recent_media is not None):
 		try:
+			time.wait(0.1)
 			if (min_id is not None):
-				recent_media, next_ = api.tag_recent_media(user_id=user_id, min_id=min_id)
+				recent_media, next_ = api.tag_recent_media(tag_name=tag, max_id=min_id)
 			else:
-				recent_media, next_ = api.tag_recent_media(user_id=user_id)
+				recent_media, next_ = api.tag_recent_media(tag_name=tag)
 			for media in recent_media:
 				all_media.append(media)
+				if len(all_media) % 1000 == 0:
+					print("At %d with rate limit %d and time %s" %(len(all_media), 
+						api.x_ratelimit_remaining, recent_media[-1].created_time))
 			if len(recent_media) > 19:
 				min_id = recent_media[-1].id.split('_')[0]
+				
+			curr_day = int(recent_media[-1].created_time.day)
+			if curr_day != prev_day:
+				media_counts.append(len(all_media))
+				pickle.dump(all_media, save_file)
+				prev_day = curr_day
+				print("Dumped data %d" %len(all_media))
+				print("Stopped at %s" %min_id)
+				all_media = []
+
+			if len(all_media) > max_media or sum(media_counts) > max_media:
+				pickle.dump(all_media, save_file)
+				print("Stopped at %s" %min_id)
+				break
 			else:
 				break
 
 		except InstagramAPIError as e:
 			print e
 			if (e.status_code == 429):
-				print "Rate limit reached. Waiting 1min"
-				recent_media = []
-				time.wait(60)
+				print min_id
+				break
 			elif (e.status_code == 502):
 				"Unable to parse response"
 				break
 			else:
 				break
-		except:
-			"Error getting data for %d" %user_id
+		except Exception as e:
+			print e
+			"Error getting data for %s" %tag
 			break
-	print "Found %d" %len(all_media)
-	media_counts.append(len(all_media))
-	pickle.dump(all_media, save_file)
+
+	print("Stopped at %s" %min_id)
 
 if __name__ == '__main__':
 	media_counts = []
 	access_token = sys.argv[1]
-	user_ids_file = sys.argv[2]
+	tag = sys.argv[2]
 	output_file = sys.argv[3]
 	api = InstagramAPI(access_token=access_token)
 	save_file = open(output_file, 'ab')
 
-	#get_recent_media("47791647")
-
-	user_ids = []
-	with open(user_ids_file, 'r') as id_file:
-		for line in id_file.readlines():
-			user_ids.append(line.rstrip('\n'))
-	print user_ids
-
-	# stopped at 10051934
-	# media counts [2944, 4328, 279, 1501, 1282, 765, 2445, 886, 1798, 234, 2058, 1168, 64, 2375, 1388, 852, 1142, 1039, 449, 771, 977, 2910, 442, 1228, 591, 4820, 4963, 14073, 4280]
-	# [5080, 309, 1, 0, 203, 286, 8701, 234, 3627, 4448, 4230, 2748, 1369]
-	# stopped at 13497422
-	# sum of 93288
-	for user_id in user_ids:
-		print "Crawling %s" %user_id
-		get_recent_media(user_id)
-		print "Rate limit %s" %api.x_ratelimit_remaining
-		print media_counts
+	get_recent_media(tag)
 

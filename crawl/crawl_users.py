@@ -1,7 +1,7 @@
 from instagram.client import InstagramAPI
 from instagram.bind import InstagramAPIError
 import sys
-import pickle
+import cPickle as pickle
 import time
 
 def get_recent_media(user_id):
@@ -33,6 +33,7 @@ def get_recent_media(user_id):
 				"Unable to parse response"
 				break
 			else:
+				"Instagram Error"
 				break
 		except:
 			"Error getting data for %d" %user_id
@@ -49,20 +50,13 @@ if __name__ == '__main__':
 	api = InstagramAPI(access_token=access_token)
 	save_file = open(output_file, 'ab')
 
-	#get_recent_media("47791647")
-
 	user_ids = []
 	with open(user_ids_file, 'r') as id_file:
 		for line in id_file.readlines():
 			user_ids.append(line.rstrip('\n'))
-			
-	# while user_ids[0] != '1535113556':
-	# 	user_ids.pop(0)
-	# stopped at 10051934
-	# media counts [2944, 4328, 279, 1501, 1282, 765, 2445, 886, 1798, 234, 2058, 1168, 64, 2375, 1388, 852, 1142, 1039, 449, 771, 977, 2910, 442, 1228, 591, 4820, 4963, 14073, 4280]
-	# [5080, 309, 1, 0, 203, 286, 8701, 234, 3627, 4448, 4230, 2748, 1369]
-	# stopped at 13497422
-	# sum of 93288
+	while user_ids[0] != '10051934':
+		user_ids.pop(0)
+
 	for user_id in user_ids:
 		try:
 			print "Crawling %s" %user_id
@@ -71,3 +65,5 @@ if __name__ == '__main__':
 			print media_counts
 		except:
 			"Error crawling"
+			# [2952, 4333, 280, 1501, 1285, 765, 2446, 887, 1800, 171, 2059, 1169, 64, 2377, 1392, 852, 1143, 1039, 450, 771, 979, 2911, 446, 1230, 591, 4822, 4965, 14113, 4285]
+			# Crawling 10051934
