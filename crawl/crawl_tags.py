@@ -67,4 +67,3 @@ if __name__ == '__main__':
 	save_file = open(output_file, 'ab')
 
 	get_recent_media(tag)
-
