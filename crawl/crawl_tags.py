@@ -4,15 +4,15 @@ import sys
 import cPickle as pickle
 import time
 
-max_media = 1e5
+max_media = 3e4
 def get_recent_media(tag):
 	all_media = []
 	recent_media = []
 	min_id = None
-	prev_day = 10
+	prev_day = 12
 	while (recent_media is not None):
 		try:
-			time.wait(0.1)
+			time.sleep(0.5)
 			if (min_id is not None):
 				recent_media, next_ = api.tag_recent_media(tag_name=tag, max_id=min_id)
 			else:
@@ -20,7 +20,7 @@ def get_recent_media(tag):
 			for media in recent_media:
 				all_media.append(media)
 				if len(all_media) % 1000 == 0:
-					print("At %d with rate limit %d and time %s" %(len(all_media), 
+					print("At %d with rate limit %s and time %s" %(len(all_media), 
 						api.x_ratelimit_remaining, recent_media[-1].created_time))
 			if len(recent_media) > 19:
 				min_id = recent_media[-1].id.split('_')[0]
@@ -36,9 +36,7 @@ def get_recent_media(tag):
 
 			if len(all_media) > max_media or sum(media_counts) > max_media:
 				pickle.dump(all_media, save_file)
-				print("Stopped at %s" %min_id)
-				break
-			else:
+				print("Reached max count. Stopped at %s" %min_id)
 				break
 
 		except InstagramAPIError as e:
