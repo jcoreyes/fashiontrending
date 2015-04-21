@@ -10,6 +10,11 @@
     font-family: 'Amatic SC', cursive;
 }
 
+.caption p {
+    font-family: 'Droid Sans';
+}
+
+
 #header{
    font-family: 'Reenie Beanie', cursive;
     padding-top: 20px;
@@ -25,9 +30,14 @@
     
 }
 
-#header a { color: #8FD8D8;}
-
-#header a:hover {text-decoration: none; color:black;}
+#sorrymessage {font-family: 'Amatic SC', cursive;
+font-size: 20px;}
+#about a { color: #8FD8D8;}
+#about a:hover {text-decoration: none; color:black;}
+#contact a { color: #8FD8D8;}
+#contact a:hover {text-decoration: none; color:black;}
+#slogan a { color: #000;}
+#slogan a:hover {text-decoration: none; color:#8FD8D8;}
 
 .expandmenu a {color:black;}
 
@@ -63,8 +73,8 @@ hr {
 }
 
 footer {
-    font-family: 'Reenie Beanie', cursive;
-    font-size: 13px;
+    font-family: "Droid Sans";
+    font-size: 10px;
 }
 
 .myButtonColor {
