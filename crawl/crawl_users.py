@@ -15,8 +15,9 @@ if __name__ == '__main__':
 	with open(user_ids_file, 'r') as id_file:
 		for line in id_file.readlines():
 			user_ids.append(line.rstrip('\n'))
-	print user_ids
-	user_ids_file.close()
+		print user_ids
+		id_file.close()
+	get_recent_media(user_ids[0])
 
 	
 
