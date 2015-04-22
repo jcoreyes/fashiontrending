@@ -53,7 +53,7 @@ def get_recent_media(tag):
 			print e
 			"Error getting data for %s" %tag
 			break
-
+			
 	print("Stopped at %s" %min_id)
 
 if __name__ == '__main__':
