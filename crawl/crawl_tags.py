@@ -1,57 +1,67 @@
 from instagram.client import InstagramAPI
+from instagram.bind import InstagramAPIError
 import sys
-#from urlparse import urlparse
-import codecs
-import pickle
-import pprint
-#Access Token:1811685103.7c9b708.bb2a3b18ffbf4adda8774e4c113d38b5
+import cPickle as pickle
+import time
 
+max_media = 3e4
+def get_recent_media(tag):
+	all_media = []
+	recent_media = []
+	min_id = None
+	prev_day = 12
+	while (recent_media is not None):
+		try:
+			time.sleep(0.5)
+			if (min_id is not None):
+				recent_media, next_ = api.tag_recent_media(tag_name=tag, max_id=min_id)
+			else:
+				recent_media, next_ = api.tag_recent_media(tag_name=tag)
+			for media in recent_media:
+				all_media.append(media)
+				if len(all_media) % 1000 == 0:
+					print("At %d with rate limit %s and time %s" %(len(all_media), 
+						api.x_ratelimit_remaining, recent_media[-1].created_time))
+			if len(recent_media) > 19:
+				min_id = recent_media[-1].id.split('_')[0]
+				
+			curr_day = int(recent_media[-1].created_time.day)
+			if curr_day != prev_day:
+				media_counts.append(len(all_media))
+				pickle.dump(all_media, save_file)
+				prev_day = curr_day
+				print("Dumped data %d" %len(all_media))
+				print("Stopped at %s" %min_id)
+				all_media = []
 
-''' Looks through all of the tags and retrives media objects that have at least three 
-tags in the list. '''
-def get_media(tags, api):
-	media_lst = []
-	for tag in tags:
-		val = api.tag_recent_media(count=10, tag_name=tag)[0]
-		for item in val:
-			count = 0
-			for aux_tag in item.__dict__['tags']:
-				tag_val = aux_tag.name
-				''' Loooks through all aux tags and checking to make sure that the have the right tag'''
-				if tag_val in tags:
-					count += 1
-					if count > 2:
-						# print item
-						# print tags
-						# print item.__dict__['tags']
-						if item not in media_lst:
-							media_lst.append(item)
-						# break
-	output = open('data.pk1', 'wb')
-	pickle.dump(media_lst, output)
-	pprint.pprint(media_lst)
-	output.close()
+			if len(all_media) > max_media or sum(media_counts) > max_media:
+				pickle.dump(all_media, save_file)
+				print("Reached max count. Stopped at %s" %min_id)
+				break
 
+		except InstagramAPIError as e:
+			print e
+			if (e.status_code == 429):
+				print min_id
+				break
+			elif (e.status_code == 502):
+				"Unable to parse response"
+				break
+			else:
+				break
+		except Exception as e:
+			print e
+			"Error getting data for %s" %tag
+			break
 
-
+	print("Stopped at %s" %min_id)
 
 if __name__ == '__main__':
+	media_counts = []
 	access_token = sys.argv[1]
-	tags_file = sys.argv[2]
+	tag = sys.argv[2]
+	output_file = sys.argv[3]
 	api = InstagramAPI(access_token=access_token)
-	tags = []
-	f = codecs.open(tags_file, encoding='utf-8')
-	tags = [str(line.strip()).translate(None, '#') for line in f]
-	tags = tags[:5]
-	get_media(tags, api)
-	# with open(tags_file, 'r') as t_file:
-	# 	tags = [line.strip() for line in t_file]
-	# 	# for line in lines:
-		# 	line = line.translate(None, '#').rstrip('\n')
-		# 	print line
-		# 	#tags.append(str(line))
-		# 	print type(line)
-		# 	tags.append(str(line))
-		# tags.append("hiwerw")
-	f.close()
-	get_media(tags, api)
+	save_file = open(output_file, 'ab')
+
+	get_recent_media(tag)
