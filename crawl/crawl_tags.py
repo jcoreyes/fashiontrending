@@ -71,11 +71,16 @@ def save_media(day_media, output_file):
 		pickle.dump(day_media, f)
 
 if __name__ == '__main__':
-	id_no = int(sys.argv[1]) # Which access token to use from file
-	
+	try:
+		id_no = int(sys.argv[1]) # Which access token to use from file
+	except:
+		print "Usage: crawl_tags.py <id_no>"
+		exit(0)
+		
 	with open('tags_to_crawl.txt', 'r') as f:
 		tags_to_crawl = f.read().splitlines()
 	print tags_to_crawl
+
 	with open('access_tokens.txt', 'r') as f:
 		access_token = f.read().splitlines()[id_no]
 
