@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import traceback
 import os
-MAX_MEDIA = 1e2
+MAX_MEDIA = 1e3
 MAX_TIME_PER_CRAWL = 3600 # max time in seconds to spend on single tag
 def get_popular_recent_media(tag):
     """ 
@@ -18,8 +18,8 @@ def get_popular_recent_media(tag):
     media_count = 0
     max_id = None
 
-    start = time.clock()
-    while (time.clock() - start) < MAX_TIME_PER_CRAWL:
+    start = time.time()
+    while (time.time() - start) < MAX_TIME_PER_CRAWL:
         try:
             # Media is return 20 per request. We can paginate through the media by
             # specifying the max id of the previous request
@@ -30,7 +30,7 @@ def get_popular_recent_media(tag):
 
             for media in recent_media:
                 tag_media.append(media)
-                if media_count > 39 and media_count % 40 == 0:
+                if media_count % 200 == 0:
                     print("At %d with rate limit %s and time %s" 
                         %(media_count, api.x_ratelimit_remaining, recent_media[-1].created_time))
                 media_count += 1
@@ -126,28 +126,29 @@ def load_tag_counts(data_file):
 
 def get_top_tags(df):
     last_col = df.shape[1] - 1
-    top_tags = df[df[last_col]>10000].pct_change(axis=1, periods=min(24, last_col))
+    top_tags = df.loc[df[last_col]>10000].pct_change(axis=1, periods=min(24, last_col))
+    # Return top 10 based on pct change
     top_tags = top_tags.sort([df.shape[1]-1], ascending = False).ix[0:10, df.shape[1]-1]
     return top_tags
 
 def crawl(df, all_tags):
-    start = time.clock()
+    start = time.time()
     top_tags = get_top_tags(df)
     f1 = True
     f2 = True
     while (True):
         try:
-            if f1 or (time.clock() - start) % 3600 == 0:
+            if f1 or (time.time() - start) % 3600 == 0:
                 tag_counts = crawl_tag_counts(all_tags)
-                save_tag_counts(tag_counts, 'time_tag_counts_temp.txt')
+                save_tag_counts(tag_counts, '/home/jcoreyes/Dropbox/fp_website_dump/time_tag_counts.txt')
                 # Also save tag counts to data frame
                 save_tag_counts_df(tag_counts, df)
                 top_tags = get_top_tags(df)
                 print top_tags
                 f1 = False
-            if f2 or (time.clock() - start) % 3600*24 == 0:
+            if f2 or (time.time() - start) % 3600*24 == 0:
                 f2 = False
-                directory = "recentMedia_" + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+                directory = "/home/jcoreyes/Dropbox/fp_website_dump/recentMedia_" + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                 for tag in top_tags.index:
@@ -178,5 +179,5 @@ if __name__ == '__main__':
 
     df = pd.DataFrame.from_dict(prev_tag_counts, orient='index')
 
-    all_tags = all_tags[0:10]
+    all_tags = all_tags
     crawl(df, all_tags)
