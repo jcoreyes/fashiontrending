@@ -5,7 +5,7 @@ import cPickle as pickle
 import time
 import datetime
 
-MAX_MEDIA = 1e2
+MAX_MEDIA = 1e3
 
 def get_recent_media(tag):
 	""" 
