@@ -11,15 +11,12 @@ shadow = [
 "#happy",
 "#summer",
 "#cute",
-
 "#stylish",
 "#trendy",
 "#favorite",
 "#look",
-
 "#nofilter",
 "#selfie",
-
 "#ifollowback",
 "#instafollow",
 "#followme",

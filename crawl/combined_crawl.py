@@ -8,8 +8,12 @@ import numpy as np
 import pandas as pd
 import traceback
 import os
+from os.path import expanduser
+
 MAX_MEDIA = 1e2
 MAX_TIME_PER_CRAWL = 3600 # max time in seconds to spend on single tag
+NUM_TOP_TAGS = 32 # How many tags to get post data for
+NUM_TOP_USERS = 10 # How many top users to save
 def get_popular_recent_media(tag):
     """ 
     Get recent media for a given tag. Return list of 100 tags sorted by likes
@@ -89,16 +93,31 @@ def save_topmedia(top_media, output_file):
     with open(output_file, 'w') as f:
         index = 1
         f.write("{\n")
-        for tag, items in top_media.items():
+        for (tag, items) in top_media:
             f.write("\"popularitem_title%d\": \"%s\",\n" %(index, tag))
             for media_index, media in enumerate(items):
                 f.write("\"popularitem%d_image%d\": \"%s\"" %(index, media_index+1, media.images['standard_resolution'].url))
-                if index != 3 or media_index != len(items)-1:
+                if index != len(top_media) or media_index != len(items)-1:
                     f.write(",")
                 f.write("\n")
             index += 1
         f.write("}")
 
+def save_top_users(all_media, output_file):
+    top_users = [media.user for media in sorted(all_media, key=lambda x: x.likes, reverse=True)[0:NUM_TOP_USERS]]
+    print("Saving %d user data" %len(top_users))
+    with open(output_file, 'w') as f:
+        index = 1
+        f.write("{\n")
+        for user in top_users:
+            f.write("\"user%d_username\": \"%s\",\n" %(index, user.username))
+            f.write("\"user%d_id\": \"%s\",\n" %(index, user.id))
+            f.write("\"user%d_profilepicture\": \"%s\"" %(index, user.profile_picture))
+            if index != len(top_users):
+                f.write(",")
+            f.write("\n")
+            index += 1
+        f.write("}")
 
 
 def save_tag_counts(tag_counts, output_file):
@@ -140,18 +159,21 @@ def load_tag_counts(data_file):
     return times, tag_counts
 
 def get_top_tags(df):
+    with open('shadow_words.txt', 'r') as f:
+        shadow_tags = f.read().splitlines()
     last_col = df.shape[1] - 1
-    top_tags = df.loc[df[last_col]>10000].pct_change(axis=1, periods=min(24, last_col))
-    top_tags.drop(['tagsforlikesapp'], inplace=True)
+    top_tags = df.loc[df[last_col]>5000].pct_change(axis=1, periods=min(24, last_col))
+    drop_tags = [x for x in shadow_tags if x in top_tags.index]
+    top_tags.drop(drop_tags, inplace=True)
     # Return top 10 based on pct change
-    top_tags = top_tags.sort([df.shape[1]-1], ascending = False).ix[0:10, df.shape[1]-1]
+    top_tags = top_tags.sort([last_col], ascending = False).ix[0:NUM_TOP_TAGS, last_col]
     return top_tags
 
 def crawl(df, all_tags):
     t1 = time.time()
     t2 = time.time()
     top_tags = get_top_tags(df)
-    f1 = False
+    f1 = True
     f2 = True
     while (True):
         try:
@@ -160,7 +182,7 @@ def crawl(df, all_tags):
                 f1 = False
                 print "Crawling counts at %s" %datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
                 tag_counts = crawl_tag_counts(all_tags)
-                save_tag_counts(tag_counts, '/home/jcoreyes/Dropbox/fp_website_dump/time_tag_counts.txt')
+                save_tag_counts(tag_counts, home + '/Dropbox/fp_website_dump/time_tag_counts.txt')
                 # Also save tag counts to data frame
                 save_tag_counts_df(tag_counts, df)
                 top_tags = get_top_tags(df)
@@ -169,17 +191,20 @@ def crawl(df, all_tags):
             if f2 or (time.time() - t2) > 3600*24:
                 t2 = time.time()
                 f2 = False
-                directory = "/home/jcoreyes/Dropbox/fp_website_dump/recentMedia_" + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+                directory = home + "/Dropbox/fp_website_dump/recentMedia_" + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                 print "Crawling tags at %s" %datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-                top30_media = {}
+                top30_media = []
+                all_media = []
                 for index, tag in enumerate(top_tags.index):
                     tag_recent_media = get_popular_recent_media(tag)
                     save_media(tag_recent_media, '%s/%s' %(directory,tag))
-                    if index < 3:
-                        top30_media[tag] = tag_recent_media[0:10]
-                save_topmedia(top30_media, "/home/jcoreyes/Dropbox/fp_website_dump/fp_website/top30.json")
+                    if index < 32:
+                        top30_media.append((tag, tag_recent_media[0:5]))
+                        all_media += tag_recent_media
+                save_topmedia(top30_media, home +"/Dropbox/fp_website_dump/fp_website/top5.json")
+                save_top_users(all_media, home +"/Dropbox/fp_website_dump/fp_website/topusers.json")
 
         except:
             print traceback.format_exc() 
@@ -187,6 +212,8 @@ def crawl(df, all_tags):
             continue
 
 if __name__ == '__main__':
+
+    home = expanduser("~")
     try:
         id_no = int(sys.argv[1]) # Which access token to use from file
     except:
@@ -195,6 +222,7 @@ if __name__ == '__main__':
         
     with open('../analyze/tag_counts.txt', 'r') as f:
         all_tags = [x.split()[0] for x in f.read().splitlines()]
+    all_tags = list(set(all_tags))
     print all_tags
 
     with open('access_tokens.txt', 'r') as f:
@@ -202,7 +230,7 @@ if __name__ == '__main__':
 
     api = InstagramAPI(access_token=access_token)
 
-    prev_times, prev_tag_counts = load_tag_counts('/home/jcoreyes/Dropbox/fp_website_dump/time_tag_counts.txt')
+    prev_times, prev_tag_counts = load_tag_counts(home + '/Dropbox/fp_website_dump/time_tag_counts.txt')
 
     df = pd.DataFrame.from_dict(prev_tag_counts, orient='index')
 
