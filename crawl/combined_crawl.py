@@ -9,8 +9,10 @@ import pandas as pd
 import traceback
 import os
 from os.path import expanduser
+import pycast
+import distance
 
-MAX_MEDIA = 1e2
+MAX_MEDIA = 5e2
 MAX_TIME_PER_CRAWL = 3600 # max time in seconds to spend on single tag
 NUM_TOP_TAGS = 32 # How many tags to get post data for
 NUM_TOP_USERS = 10 # How many top users to save
@@ -153,7 +155,7 @@ def load_tag_counts(data_file):
                 tag_counts[tag] = [count]
             else:
                 tag_counts[tag].append(count)
-    times = [datetime.datetime(*time.strptime(x, '%Y-%m-%d-%H-%M-%S')[:6]) for x in reversed(times)]
+    times = [datetime.datetime(*time.strptime(x, '%Y-%m-%d-%H-%M-%S')[:6]) for x in times]
     for tag, counts in tag_counts.items():
         tag_counts[tag] = counts[0:len(times)]
     return times, tag_counts
@@ -172,8 +174,8 @@ def get_top_tags(df):
 def crawl(df, all_tags):
     t1 = time.time()
     t2 = time.time()
-    top_tags = get_top_tags(df)
-    f1 = True
+    top_tags = detect_trend(df) #get_top_tags(df)
+    f1 = False
     f2 = True
     while (True):
         try:
@@ -185,7 +187,7 @@ def crawl(df, all_tags):
                 save_tag_counts(tag_counts, home + '/Dropbox/fp_website_dump/time_tag_counts.txt')
                 # Also save tag counts to data frame
                 save_tag_counts_df(tag_counts, df)
-                top_tags = get_top_tags(df)
+                top_tags = detect_trend(df) #get_top_tags(df)
                 print top_tags
 
             if f2 or (time.time() - t2) > 3600*24:
@@ -197,7 +199,7 @@ def crawl(df, all_tags):
                 print "Crawling tags at %s" %datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
                 top30_media = []
                 all_media = []
-                for index, tag in enumerate(top_tags.index):
+                for index, tag in enumerate(top_tags):
                     tag_recent_media = get_popular_recent_media(tag)
                     save_media(tag_recent_media, '%s/%s' %(directory,tag))
                     if index < 32:
@@ -211,6 +213,48 @@ def crawl(df, all_tags):
             time.sleep(60)
             continue
 
+def detect_trend(df):
+    with open('shadow_words.txt', 'r') as f:
+        shadow_tags = f.read().splitlines()
+    shadow_tags.append('')
+    top_tags = df.loc[df[df.shape[1]-1]>5000]
+    drop_tags = [x for x in shadow_tags if x in top_tags.index]
+    top_tags = top_tags.drop(drop_tags)
+
+    #model = pycast.methods.ExponentialSmoothing(smoothingFactor=0.1,valuesToForecast=1)
+    model = pycast.methods.HoltWintersMethod(seasonLength=4)
+    forecast = []
+    prev_times_s = map(lambda x: (x-prev_times[0]).total_seconds(), prev_times)
+    top_tags.fillna(method='pad', inplace=True, axis=0)
+    for index in top_tags.index:
+        ts = zip(prev_times_s, df.ix[index])
+        preds = model.execute(ts)
+        pred = preds[-1][1] / preds[-10][1]
+        forecast.append((index, pred))
+    forecast.sort(key=lambda x: x[1], reverse=True)
+    candidates = [x[0] for x in forecast[0:100]]
+    candidates.sort(key=len, reverse=True)
+    print candidates
+    top = []
+    for t1 in candidates:
+        skip = False
+        for t2 in top:
+            #print t1, t2
+            #print distance.nlevenshtein(t1, t2, method=1)
+            if t1 != t2 and distance.nlevenshtein(t1, t2, method=1) < 0.4:
+                skip = True
+                break
+        if skip:
+            continue
+        top.append(t1)
+    top_sorted = []
+    for tag in forecast[0:100]:
+        if tag[0] in top:
+            top_sorted.append(tag[0])
+        if len(top_sorted) >= NUM_TOP_TAGS:
+            break
+    return top_sorted
+    
 if __name__ == '__main__':
 
     home = expanduser("~")
@@ -235,4 +279,5 @@ if __name__ == '__main__':
     df = pd.DataFrame.from_dict(prev_tag_counts, orient='index')
 
     all_tags = all_tags
+    #print detect_trend(df)
     crawl(df, all_tags)
