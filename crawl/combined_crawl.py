@@ -14,7 +14,7 @@ import distance
 
 MAX_MEDIA = 5e2
 MAX_TIME_PER_CRAWL = 3600 # max time in seconds to spend on single tag
-NUM_TOP_TAGS = 32 # How many tags to get post data for
+NUM_TOP_TAGS = 100 # How many tags to get post data for
 NUM_TOP_USERS = 10 # How many top users to save
 def get_popular_recent_media(tag):
     """ 
@@ -106,8 +106,17 @@ def save_topmedia(top_media, output_file):
         f.write("}")
 
 def save_top_users(all_media, output_file):
-    top_users = [media.user for media in sorted(all_media, key=lambda x: x.likes, reverse=True)[0:NUM_TOP_USERS]]
+    top_users_candidates = [media.user for media in sorted(all_media, key=lambda x: x.likes, reverse=True)]
+    top_usernames = []
+    top_users = []
+    for user in top_users_candidates:
+        if len(top_users) >= NUM_TOP_USERS:
+            break
+        if user.username not in top_usernames:
+            top_usernames.append(user.username)
+            top_users.append(user)
     print("Saving %d user data" %len(top_users))
+    print top_usernames
     with open(output_file, 'w') as f:
         index = 1
         f.write("{\n")
@@ -167,7 +176,7 @@ def get_top_tags(df):
     top_tags = df.loc[df[last_col]>5000].pct_change(axis=1, periods=min(24, last_col))
     drop_tags = [x for x in shadow_tags if x in top_tags.index]
     top_tags.drop(drop_tags, inplace=True)
-    # Return top 10 based on pct change
+    # Return top 100 based on pct change
     top_tags = top_tags.sort([last_col], ascending = False).ix[0:NUM_TOP_TAGS, last_col]
     return top_tags
 
@@ -175,7 +184,7 @@ def crawl(df, all_tags):
     t1 = time.time()
     t2 = time.time()
     top_tags = detect_trend(df) #get_top_tags(df)
-    f1 = False
+    f1 = True
     f2 = True
     while (True):
         try:
@@ -201,13 +210,13 @@ def crawl(df, all_tags):
                 all_media = []
                 for index, tag in enumerate(top_tags):
                     tag_recent_media = get_popular_recent_media(tag)
-                    save_media(tag_recent_media, '%s/%s' %(directory,tag))
-                    if index < 32:
-                        top30_media.append((tag, tag_recent_media[0:5]))
+                    #save_media(tag_recent_media, '%s/%s' %(directory,tag))
+                    if index < 100:
+                        top30_media.append((tag, tag_recent_media[0:10]))
                         all_media += tag_recent_media
-                save_topmedia(top30_media, home +"/Dropbox/fp_website_dump/fp_website/top5.json")
+                save_topmedia(top30_media, home +"/Dropbox/fp_website_dump/fp_website/top100.json")
                 save_top_users(all_media, home +"/Dropbox/fp_website_dump/fp_website/topusers.json")
-
+            time.sleep(60)
         except:
             print traceback.format_exc() 
             time.sleep(60)
@@ -216,6 +225,8 @@ def crawl(df, all_tags):
 def detect_trend(df):
     with open('shadow_words.txt', 'r') as f:
         shadow_tags = f.read().splitlines()
+    with open('bad_list_total.txt', 'r') as f:
+        shadow_tags += f.read().splitlines()
     shadow_tags.append('')
     top_tags = df.loc[df[df.shape[1]-1]>5000]
     drop_tags = [x for x in shadow_tags if x in top_tags.index]
@@ -232,7 +243,7 @@ def detect_trend(df):
         pred = preds[-1][1] / preds[-10][1]
         forecast.append((index, pred))
     forecast.sort(key=lambda x: x[1], reverse=True)
-    candidates = [x[0] for x in forecast[0:100]]
+    candidates = [x[0] for x in forecast[0:500]]
     candidates.sort(key=len, reverse=True)
     print candidates
     top = []
@@ -248,7 +259,7 @@ def detect_trend(df):
             continue
         top.append(t1)
     top_sorted = []
-    for tag in forecast[0:100]:
+    for tag in forecast[0:500]:
         if tag[0] in top:
             top_sorted.append(tag[0])
         if len(top_sorted) >= NUM_TOP_TAGS:
