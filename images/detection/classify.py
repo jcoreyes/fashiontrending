@@ -9,6 +9,7 @@ from cluster import *
 from six import string_types
 from instagram.client import InstagramAPI
 import filter32
+from convertData import writeMultiTrendData
 
 
 from socket import error as SocketError
@@ -322,5 +323,6 @@ if __name__== '__main__':
 	classify(knn, svm, json_data, 5)
 	filter32.sort(MOD_FILE, TAG_FILE, 32)
 	# classify2(json_data, num_img)
+	writeMultiTrendData(MOD_FILE)
 
 
